@@ -1,5 +1,6 @@
 import pygame
 import numpy as np
+import time
 
 col_about_to_die = (200, 200, 225)
 col_alive = (255, 255, 215)
@@ -7,57 +8,104 @@ col_background = (10, 10, 40)
 col_grid = (30, 30, 60)
 
 
-def update(surface, cur, sz):
-    nxt = np.zeros((cur.shape[0], cur.shape[1]))
+class GameOfLife:
+    def __init__(self, **kwargs):
+        self.dim_x = kwargs["dimension_x"]
+        self.dim_y = kwargs["dimension_y"]
+        self.cell_sie = kwargs["cell_size"]
+        self.cycle_timer = kwargs["cycle_duration"]
+        self.life_span = kwargs["cell_lifetime"]
 
-    for r, c in np.ndindex(cur.shape):
-        num_alive = np.sum(cur[r-1:r+2, c-1:c+2]) - cur[r, c]
+        self.game_cells = None
+        self.surface = None
+        self.cell_size = None
+        self.next_iteration = None
+        self.previous_game_cells = None
+        self.generation = 0
+        self.population = 0
+        self.lifspan_cells = np.zeros((self.dim_y, self.dim_x))
 
-        if cur[r, c] == 1 and num_alive < 2 or num_alive > 3:
-            col = col_about_to_die
-        elif (cur[r, c] == 1 and 2 <= num_alive <= 3) or (cur[r, c] == 0 and num_alive == 3):
-            nxt[r, c] = 1
-            col = col_alive
+    def init(self):
+        cells = np.zeros((self.dim_y, self.dim_x))
+        pattern = np.array([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]);
 
-        col = col if cur[r, c] == 1 else col_background
-        pygame.draw.rect(surface, col, (c*sz, r*sz, sz-1, sz-1))
+        self.population = np.count_nonzero(pattern == 1)
+        self.generation += 1
 
-    return nxt
+        pos = (3, 3)
+        cells[pos[0]:pos[0] + pattern.shape[0], pos[1]:pos[1] + pattern.shape[1]] = pattern
+        self.game_cells = cells
+        self.previous_game_cells = cells
 
+    def update(self):
+        nxt = np.zeros((self.game_cells.shape[0], self.game_cells.shape[1]))
 
-def init(dimx, dimy):
-    cells = np.zeros((dimy, dimx))
-    pattern = np.array([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0],
-                        [1,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                        [1,1,0,0,0,0,0,0,0,0,1,0,0,0,1,0,1,1,0,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,1,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                        [0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]);
-    pos = (3, 3)
-    cells[pos[0]:pos[0]+pattern.shape[0], pos[1]:pos[1]+pattern.shape[1]] = pattern
-    return cells
+        for r, c in np.ndindex(self.game_cells.shape):
+            num_alive = np.sum(self.game_cells[r - 1:r + 2, c - 1:c + 2]) - self.game_cells[r, c]
 
+            if self.game_cells[r, c] == 1 and num_alive < 2 or num_alive > 3:
+                col = col_about_to_die
+            elif (self.game_cells[r, c] == 1 and 2 <= num_alive <= 3) or (self.game_cells[r, c] == 0 and num_alive == 3):
+                nxt[r, c] = 1
+                col = col_alive
 
-def main(dimx, dimy, cellsize):
-    pygame.init()
-    surface = pygame.display.set_mode((dimx * cellsize, dimy * cellsize))
-    pygame.display.set_caption("John Conway's Game of Life")
+            col = col if self.game_cells[r, c] == 1 else col_background
+            pygame.draw.rect(self.surface, col, (c * self.cell_sie, r * self.cell_sie, self.cell_sie - 1, self.cell_sie - 1))
 
-    cells = init(dimx, dimy)
+        self.population = np.count_nonzero(nxt == 1)
+        self.generation += 1
+        self.previous_game_cells = self.game_cells
+        self.game_cells = nxt
 
-    while True:
-        for event in pygame.event.get():
-            if event.type == pygame.QUIT:
-                pygame.quit()
-                return
+    def check_life_span(self):
+        for (current_row, current_col), (old_row, old_col) in zip(np.ndindex(self.game_cells.shape),
+                                                                  np.ndindex(self.previous_game_cells.shape)):
+            if self.game_cells[current_row, current_col] == 1 and self.game_cells[old_row, old_col] == 1:
+                if self.lifspan_cells[current_row, current_col] > self.life_span:
 
-        surface.fill(col_grid)
-        cells = update(surface, cells, cellsize)
-        pygame.display.update()
+                    pygame.draw.rect(self.surface, col_about_to_die,
+                                     (current_col * self.cell_sie, current_row * self.cell_sie, self.cell_sie - 1,
+                                      self.cell_sie - 1))
+                    print(f"Killing {current_row}{current_col}")
+                    # Sterege
+                    self.game_cells[current_row][current_col] = 0
+                    # Asignare vecini
+                    self.game_cells[current_row + 1][current_col + 1] = 1
+                else:
+                    self.lifspan_cells[current_row, current_col] += 1
+
+    def run(self):
+        pygame.init()
+        self.surface = pygame.display.set_mode((self.dim_x * self.cell_sie, self.dim_y * self.cell_sie))
+        pygame.display.set_caption("John Conway's Game of Life")
+
+        self.init()
+
+        while True:
+            self.print_display()
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    return
+
+            self.surface.fill(col_grid)
+            self.check_life_span()
+            self.update()
+            pygame.display.update()
+            time.sleep(self.cycle_timer)
+
+    def print_display(self):
+        print(f"Generatia {self.generation} are populatie {self.population}")
 
 
 if __name__ == "__main__":
-    main(120, 90, 8)
+    GOLobj = GameOfLife(dimension_x=120, dimension_y=90, cell_size=8, cycle_duration=0.5, cell_lifetime=5)
+    GOLobj.run()
