@@ -1,6 +1,7 @@
 import pygame
 import numpy as np
 import time
+from data_analyzer import DataAnalyzer
 
 col_about_to_die = (200, 200, 225)
 col_alive = (255, 255, 215)
@@ -21,6 +22,7 @@ class GameOfLife:
         self.cell_size = None
         self.next_iteration = None
         self.previous_game_cells = None
+        self.data_stats = {"Generatie": [], "Populatie": []}
         self.generation = 0
         self.population = 0
         self.lifspan_cells = np.zeros((self.dim_y, self.dim_x))
@@ -28,12 +30,12 @@ class GameOfLife:
     def init(self):
         cells = np.zeros((self.dim_y, self.dim_x))
         pattern = np.array([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,1,1,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]);
 
@@ -90,10 +92,11 @@ class GameOfLife:
         self.init()
 
         while True:
-            self.print_display()
+            self.update_data_set()
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:
                     pygame.quit()
+                    self.output_data()
                     return
 
             self.surface.fill(col_grid)
@@ -102,10 +105,20 @@ class GameOfLife:
             pygame.display.update()
             time.sleep(self.cycle_timer)
 
-    def print_display(self):
-        print(f"Generatia {self.generation} are populatie {self.population}")
+    def update_data_set(self):
+        self.data_stats["Generatie"].append(self.generation)
+        self.data_stats["Populatie"].append(self.population)
+
+    def output_data(self, skip_step=0):
+        data_writer = DataAnalyzer()
+        if skip_step == 0:
+            data_writer.write(self.data_stats)
+        else:
+            temp_data = {"Generatie": self.data_stats["Generatie"][::skip_step],
+                         "Populatie": self.data_stats["Populatie"][::skip_step]}
+            data_writer.write(temp_data)
 
 
 if __name__ == "__main__":
-    GOLobj = GameOfLife(dimension_x=120, dimension_y=90, cell_size=8, cycle_duration=0.5, cell_lifetime=5)
+    GOLobj = GameOfLife(dimension_x=120, dimension_y=90, cell_size=8, cycle_duration=0.1, cell_lifetime=5)
     GOLobj.run()
