@@ -6,7 +6,7 @@ from data_analyzer import DataAnalyzer
 col_about_to_die = (200, 200, 225)
 col_alive = (255, 255, 215)
 col_background = (10, 10, 40)
-col_grid = (30, 30, 60)
+col_grid = (30, 30, 30)
 
 
 class GameOfLife:
@@ -15,7 +15,9 @@ class GameOfLife:
         self.dim_y = kwargs["dimension_y"]
         self.cell_sie = kwargs["cell_size"]
         self.cycle_timer = kwargs["cycle_duration"]
+        self.is_life_span_qm = kwargs["is_life_span"]
         self.life_span = kwargs["cell_lifetime"]
+        self.life_span_type = kwargs["evolution_type"]
 
         self.game_cells = None
         self.surface = None
@@ -27,15 +29,15 @@ class GameOfLife:
         self.population = 0
         self.lifspan_cells = np.zeros((self.dim_y, self.dim_x))
 
-    def init(self):
+    def init_game(self):
         cells = np.zeros((self.dim_y, self.dim_x))
         pattern = np.array([[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,1,1,1,1,1,0,0,0,1,1,1,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,1,1,1,1,1,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+                            [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
                             [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]]);
 
@@ -76,11 +78,15 @@ class GameOfLife:
                     pygame.draw.rect(self.surface, col_about_to_die,
                                      (current_col * self.cell_sie, current_row * self.cell_sie, self.cell_sie - 1,
                                       self.cell_sie - 1))
-                    print(f"Killing {current_row}{current_col}")
-                    # Sterege
-                    self.game_cells[current_row][current_col] = 0
-                    # Asignare vecini
-                    self.game_cells[current_row + 1][current_col + 1] = 1
+                    if self.life_span_type == "Kill_and_spawn":
+                        self.game_cells[current_row][current_col] = 0
+                        self.game_cells[current_row + 1][current_col + 1] = 1
+                    elif self.life_span_type == "kill":
+                        self.game_cells[current_row][current_col] = 0
+                    elif self.life_span_type == "spawn":
+                        self.game_cells[current_row + 1][current_col + 1] = 1
+                    else:
+                        raise RuntimeError("Kill_and_spawn / kill / spawn!")
                 else:
                     self.lifspan_cells[current_row, current_col] += 1
 
@@ -89,7 +95,7 @@ class GameOfLife:
         self.surface = pygame.display.set_mode((self.dim_x * self.cell_sie, self.dim_y * self.cell_sie))
         pygame.display.set_caption("John Conway's Game of Life")
 
-        self.init()
+        self.init_game()
 
         while True:
             self.update_data_set()
@@ -100,7 +106,8 @@ class GameOfLife:
                     return
 
             self.surface.fill(col_grid)
-            self.check_life_span()
+            if self.is_life_span_qm:
+                self.check_life_span()
             self.update()
             pygame.display.update()
             time.sleep(self.cycle_timer)
@@ -120,5 +127,6 @@ class GameOfLife:
 
 
 if __name__ == "__main__":
-    GOLobj = GameOfLife(dimension_x=120, dimension_y=90, cell_size=8, cycle_duration=0.1, cell_lifetime=5)
+    GOLobj = GameOfLife(dimension_x=120, dimension_y=90, cell_size=8, cycle_duration=0.1, is_life_span=True,
+                        evolution_type="spawn", cell_lifetime=5)
     GOLobj.run()
